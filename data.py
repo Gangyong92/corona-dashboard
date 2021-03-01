@@ -11,7 +11,12 @@ totals_df = totals_df.rename(columns={"index": "condition"})
 
 # 나라별 확진자, 사망자, 완치자 df
 countries_df = daily_df[["Country_Region", "Confirmed", "Deaths", "Recovered"]]
-countries_df = countries_df.groupby("Country_Region").sum().reset_index()
+countries_df = (
+    countries_df.groupby("Country_Region")
+    .sum()
+    .sort_values(by="Confirmed", ascending=False)
+    .reset_index()
+)
 
 
 conditions = ["confirmed", "deaths", "recovered"]
