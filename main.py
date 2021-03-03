@@ -7,8 +7,16 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import plotly.express as px
-from data import countries_df, totals_df
+from dash.dependencies import Input, Output
+from data import (
+    countries_df,
+    totals_df,
+    make_global_df,
+    make_country_df,
+    dropdown_options,
+)
 from builders import make_table
+
 
 stylesheets = [
     "https://cdn.jsdelivr.net/npm/reset-css@5.0.1/reset.min.css",  # reset css
@@ -16,6 +24,7 @@ stylesheets = [
 ]
 
 app = dash.Dash(__name__, external_stylesheets=stylesheets)
+server = app.server
 
 bubble_map = px.scatter_geo(
     countries_df,
@@ -91,10 +100,59 @@ app.layout = html.Div(
             },
             children=[
                 html.Div(children=[dcc.Graph(figure=bars_graph)]),
+                html.Div(
+                    style={"grid-column": "span 3"},
+                    children=[
+                        dcc.Dropdown(
+                            style={
+                                "width": 320,
+                                "color": "#111111",
+                                "margin": "0 auto",
+                            },
+                            placeholder="Select a Country",
+                            id="country",
+                            options=[
+                                {"label": country, "value": country}
+                                for country in dropdown_options
+                            ],
+                        ),
+                        dcc.Graph(id="country-graph"),
+                    ],
+                ),
             ],
         ),
     ],
 )
 
-if __name__ == "__main__":
-    app.run_server(debug=True)
+
+@app.callback(
+    Output("country-graph", "figure"),  # hello-output이라는 id를 가지는 곳에 children 쪽으로 출력함.
+    [Input("country", "value")],  # hello-input이라는 id를 가지는 곳으로부터 value를 받음.
+)
+def update_hello(value):
+    if value:
+        df = make_country_df(value)
+    else:
+        df = make_global_df()
+
+    fig = px.line(
+        df,
+        x="date",
+        y=["confirmed", "deaths", "recovered"],
+        labels={"value": "Cases", "variable": "Condition", "date": "Date"},
+        hover_data={
+            "value": ":,",
+            "variable": False,
+        },
+        template="plotly_dark",
+        color_discrete_map={
+            "confirmed": "#e74c3c",
+            "deaths": "#8e44ad",
+            "recovered": "#27ae60",
+        },
+    )
+    fig.update_xaxes(rangeslider_visible=True)
+
+    return fig
+
+
